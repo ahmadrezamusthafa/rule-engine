@@ -97,6 +97,210 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			expected: "overbooking",
 		},
 		{
+			name: "Valid condition and action 3",
+			input: map[string]interface{}{
+				"amount":         5000,
+				"account_number": "123343242334",
+				"remark":         "BFST123456",
+				"bank_id":        "bca",
+			},
+			rule: Rule{
+				ID: 123,
+				Condition: Condition{
+					LogicalOperator: "AND",
+					Conditions: []Condition{
+						{
+							Name:     "amount",
+							Operator: operator.Equals,
+							Value:    5000,
+						},
+						{
+							Name:     "remark",
+							Operator: operator.Match,
+							Value:    "BFST[0-9]+.*",
+						},
+						{
+							LogicalOperator: "OR",
+							Conditions: []Condition{
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bca",
+								},
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bni",
+								},
+							},
+						},
+					},
+				},
+				Actions: []Action{
+					{
+						Type: actiontype.ReturnValue,
+						Params: ActionParams{
+							Value: "overbooking",
+						},
+					},
+				},
+			},
+			expected: "overbooking",
+		},
+		{
+			name: "Valid condition and action 4",
+			input: map[string]interface{}{
+				"amount":         5000,
+				"account_number": "13131",
+				"remark":         "BFCST123456",
+				"bank_id":        "bri",
+			},
+			rule: Rule{
+				ID: 123,
+				Condition: Condition{
+					LogicalOperator: "OR",
+					Conditions: []Condition{
+						{
+							Name:     "amount",
+							Operator: operator.Equals,
+							Value:    5000,
+						},
+						{
+							Name:     "remark",
+							Operator: operator.Match,
+							Value:    "BFST[0-9]+.*",
+						},
+						{
+							LogicalOperator: "OR",
+							Conditions: []Condition{
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bca",
+								},
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bni",
+								},
+							},
+						},
+					},
+				},
+				Actions: []Action{
+					{
+						Type: actiontype.ReturnValue,
+						Params: ActionParams{
+							Value: "overbooking",
+						},
+					},
+				},
+			},
+			expected: "overbooking",
+		},
+		{
+			name: "Valid condition and action 5",
+			input: map[string]interface{}{
+				"amount":         4000,
+				"account_number": "13131",
+				"remark":         "BFCST123456",
+				"bank_id":        "bni",
+			},
+			rule: Rule{
+				ID: 123,
+				Condition: Condition{
+					LogicalOperator: "OR",
+					Conditions: []Condition{
+						{
+							Name:     "amount",
+							Operator: operator.Equals,
+							Value:    5000,
+						},
+						{
+							Name:     "remark",
+							Operator: operator.Match,
+							Value:    "BFST[0-9]+.*",
+						},
+						{
+							LogicalOperator: "OR",
+							Conditions: []Condition{
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bca",
+								},
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bni",
+								},
+							},
+						},
+					},
+				},
+				Actions: []Action{
+					{
+						Type: actiontype.ReturnValue,
+						Params: ActionParams{
+							Value: "overbooking",
+						},
+					},
+				},
+			},
+			expected: "overbooking",
+		},
+		{
+			name: "Valid condition and action 6",
+			input: map[string]interface{}{
+				"amount":         4000,
+				"account_number": "13131",
+				"remark":         "BFCST123456",
+				"bank_id":        "bni",
+			},
+			rule: Rule{
+				ID: 123,
+				Condition: Condition{
+					LogicalOperator: "OR",
+					Conditions: []Condition{
+						{
+							Name:     "amount",
+							Operator: operator.Equals,
+							Value:    5000,
+						},
+						{
+							Name:     "remark",
+							Operator: operator.Match,
+							Value:    "BFST[0-9]+.*",
+						},
+						{
+							LogicalOperator: "AND",
+							Conditions: []Condition{
+								{
+									Name:     "bank_id",
+									Operator: operator.Equals,
+									Value:    "bni",
+								},
+								{
+									Name:     "amount",
+									Operator: operator.Equals,
+									Value:    4000,
+								},
+							},
+						},
+					},
+				},
+				Actions: []Action{
+					{
+						Type: actiontype.ReturnValue,
+						Params: ActionParams{
+							Value: "overbooking",
+						},
+					},
+				},
+			},
+			expected: "overbooking",
+		},
+		{
 			name: "Valid condition without action",
 			input: map[string]interface{}{
 				"amount":         5000,

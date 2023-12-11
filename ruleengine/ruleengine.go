@@ -87,6 +87,9 @@ func isEqual(a, b interface{}) bool {
 		if val, ok := b.(int); ok {
 			return a == val
 		}
+		if val, ok := b.(float64); ok {
+			return a == int(val)
+		}
 	case float64:
 		if val, ok := b.(float64); ok {
 			return a == val
