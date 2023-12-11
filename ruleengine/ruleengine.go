@@ -9,7 +9,7 @@ import (
 )
 
 type RuleEngine interface {
-	ApplyRule(input map[string]interface{}, rule Rule) (map[string]interface{}, error)
+	ApplyRule(input map[string]interface{}, rule Rule) (interface{}, error)
 }
 
 type ruleEngine struct{}
@@ -18,25 +18,29 @@ func NewRuleEngine() RuleEngine {
 	return &ruleEngine{}
 }
 
-func (re *ruleEngine) ApplyRule(input map[string]interface{}, rule Rule) (map[string]interface{}, error) {
+func (re *ruleEngine) ApplyRule(input map[string]interface{}, rule Rule) (result interface{}, err error) {
+	result = false
 	if evaluateConditions(input, rule.Condition) {
+		result = true
 		for _, action := range rule.Actions {
-			applyAction(input, action)
+			result = applyAction(input, action)
 		}
 	}
 
-	return input, nil
+	return
 }
 
-func applyAction(input map[string]interface{}, action Action) {
+func applyAction(input map[string]interface{}, action Action) (result interface{}) {
 	switch action.Type {
 	case actiontype.ReplaceString:
 		params := action.Params
-		input[params.Name] = regexp.MustCompile(params.Pattern).ReplaceAllString(input[params.Name].(string), params.Replacement)
+		result = regexp.MustCompile(params.Pattern).ReplaceAllString(input[params.Name].(string), params.Replacement)
 	case actiontype.ReturnValue:
 		params := action.Params
-		input[params.Name] = params.Value
+		result = params.Value
 	}
+
+	return
 }
 
 func evaluateConditions(input map[string]interface{}, condition Condition) bool {
