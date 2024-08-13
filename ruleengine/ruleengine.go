@@ -1,6 +1,7 @@
 package ruleengine
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/actiontype"
@@ -10,24 +11,77 @@ import (
 	"log"
 	"reflect"
 	"regexp"
+	"strconv"
 )
 
 type RuleEngine interface {
-	ApplyRule(input map[string]interface{}, rule Rule) (interface{}, error)
-	ApplyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result bool, err error)
+	RegisterRule(ruleStr string) Processor
+	RegisterRuleSet(ruleSetStr string) Processor
+	applyRule(input map[string]interface{}, rule Rule) (interface{}, error)
+	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error)
 }
 
-type ruleEngine struct {
+type Processor interface {
+	Apply(input map[string]interface{}) (interface{}, error)
+	GetOutputDetails() map[string]interface{}
+}
+
+type engine struct {
+	rule          *Rule
+	ruleSet       *RuleSet
 	OutputDetails map[string]interface{} `json:"output_details"`
 }
 
+type processor struct {
+	ruleEngine *engine
+}
+
 func NewRuleEngine() RuleEngine {
-	return &ruleEngine{
-		OutputDetails: make(map[string]interface{}, 0),
+	return &engine{
+		OutputDetails: make(map[string]interface{}),
 	}
 }
 
-func (re *ruleEngine) ApplyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result bool, err error) {
+func newRuleEngineProcessor(ruleEngine *engine) Processor {
+	return &processor{
+		ruleEngine: ruleEngine,
+	}
+}
+
+func (re *engine) RegisterRule(ruleStr string) Processor {
+	var rule Rule
+	err := json.Unmarshal([]byte(ruleStr), &rule)
+	if err != nil {
+		return nil
+	}
+	re.rule = &rule
+	return newRuleEngineProcessor(re)
+}
+
+func (re *engine) RegisterRuleSet(ruleSetStr string) Processor {
+	var ruleSet RuleSet
+	err := json.Unmarshal([]byte(ruleSetStr), &ruleSet)
+	if err != nil {
+		return nil
+	}
+	re.ruleSet = &ruleSet
+	return newRuleEngineProcessor(re)
+}
+
+func (p *processor) Apply(input map[string]interface{}) (result interface{}, err error) {
+	if p.ruleEngine.rule != nil {
+		return p.ruleEngine.applyRule(input, *p.ruleEngine.rule)
+	} else if p.ruleEngine.ruleSet != nil {
+		return p.ruleEngine.applyRuleSet(input, *p.ruleEngine.ruleSet)
+	}
+	return nil, errors.New("rule and rule set are empty, please specify one")
+}
+
+func (p *processor) GetOutputDetails() map[string]interface{} {
+	return p.ruleEngine.OutputDetails
+}
+
+func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error) {
 	if ruleSet.LogicalOperator == "" {
 		ruleSet.LogicalOperator = logicaloperator.And
 	}
@@ -38,10 +92,31 @@ func (re *ruleEngine) ApplyRuleSet(input map[string]interface{}, ruleSet RuleSet
 		result, err = applyLogicalOr(input, ruleSet.Rules, re)
 	}
 
+	if result == true {
+		for _, action := range ruleSet.Actions {
+			result = applyAction(input, action)
+		}
+	}
+
 	return result, err
 }
 
-func applyLogicalAnd(input map[string]interface{}, rules []interface{}, re *ruleEngine) (bool, error) {
+func (re *engine) applyRule(input map[string]interface{}, rule Rule) (result interface{}, err error) {
+	if rule.Condition.LogicalOperator == "" {
+		rule.Condition.LogicalOperator = logicaloperator.And
+	}
+
+	result = evaluateConditions(input, rule.Condition)
+
+	id := fmt.Sprint(rule.ID)
+	if _, ok := re.OutputDetails[id]; !ok {
+		re.OutputDetails[id] = result
+	}
+
+	return
+}
+
+func applyLogicalAnd(input map[string]interface{}, rules []interface{}, re *engine) (bool, error) {
 	result := true
 	for _, nestedRule := range rules {
 		switch r := nestedRule.(type) {
@@ -51,7 +126,10 @@ func applyLogicalAnd(input map[string]interface{}, rules []interface{}, re *rule
 				if err != nil {
 					return false, err
 				}
-				result = result && ruleSetResult
+				switch r := ruleSetResult.(type) {
+				case bool:
+					result = result && r
+				}
 			} else {
 				ruleResult, err := applyMapRule(input, r, re)
 				if err != nil {
@@ -60,7 +138,7 @@ func applyLogicalAnd(input map[string]interface{}, rules []interface{}, re *rule
 				result = result && ruleResult
 			}
 		case Rule:
-			ruleResult, ruleErr := re.ApplyRule(input, r)
+			ruleResult, ruleErr := re.applyRule(input, r)
 			if ruleErr != nil {
 				return false, ruleErr
 			}
@@ -77,7 +155,7 @@ func applyLogicalAnd(input map[string]interface{}, rules []interface{}, re *rule
 	return result, nil
 }
 
-func applyLogicalOr(input map[string]interface{}, rules []interface{}, re *ruleEngine) (bool, error) {
+func applyLogicalOr(input map[string]interface{}, rules []interface{}, re *engine) (bool, error) {
 	result := false
 	for _, nestedRule := range rules {
 		switch r := nestedRule.(type) {
@@ -87,7 +165,10 @@ func applyLogicalOr(input map[string]interface{}, rules []interface{}, re *ruleE
 				if err != nil {
 					return false, err
 				}
-				result = result || ruleSetResult
+				switch r := ruleSetResult.(type) {
+				case bool:
+					result = result || r
+				}
 			} else {
 				ruleResult, err := applyMapRule(input, r, re)
 				if err != nil {
@@ -96,7 +177,7 @@ func applyLogicalOr(input map[string]interface{}, rules []interface{}, re *ruleE
 				result = result || ruleResult
 			}
 		case Rule:
-			ruleResult, ruleErr := re.ApplyRule(input, r)
+			ruleResult, ruleErr := re.applyRule(input, r)
 			if ruleErr != nil {
 				return false, ruleErr
 			}
@@ -113,7 +194,7 @@ func applyLogicalOr(input map[string]interface{}, rules []interface{}, re *ruleE
 	return result, nil
 }
 
-func applyMapRuleSet(input map[string]interface{}, ruleMap map[string]interface{}, re *ruleEngine) (bool, error) {
+func applyMapRuleSet(input map[string]interface{}, ruleMap map[string]interface{}, re *engine) (interface{}, error) {
 	var ruleSet RuleSet
 	cfg := &mapstructure.DecoderConfig{
 		Metadata: nil,
@@ -127,10 +208,10 @@ func applyMapRuleSet(input map[string]interface{}, ruleMap map[string]interface{
 		return false, err
 	}
 
-	return re.ApplyRuleSet(input, ruleSet)
+	return re.applyRuleSet(input, ruleSet)
 }
 
-func applyMapRule(input map[string]interface{}, ruleMap map[string]interface{}, re *ruleEngine) (bool, error) {
+func applyMapRule(input map[string]interface{}, ruleMap map[string]interface{}, re *engine) (bool, error) {
 	var rule Rule
 	cfg := &mapstructure.DecoderConfig{
 		Metadata: nil,
@@ -144,7 +225,7 @@ func applyMapRule(input map[string]interface{}, ruleMap map[string]interface{}, 
 		return false, err
 	}
 
-	ruleResult, err := re.ApplyRule(input, rule)
+	ruleResult, err := re.applyRule(input, rule)
 	if err != nil {
 		return false, err
 	}
@@ -157,35 +238,19 @@ func applyMapRule(input map[string]interface{}, ruleMap map[string]interface{}, 
 	}
 }
 
-func (re *ruleEngine) ApplyRule(input map[string]interface{}, rule Rule) (result interface{}, err error) {
-	if rule.Condition.LogicalOperator == "" {
-		rule.Condition.LogicalOperator = logicaloperator.And
-	}
-
-	result = false
-	if evaluateConditions(input, rule.Condition) {
-		result = true
-		for _, action := range rule.Actions {
-			result = applyAction(input, action)
-		}
-	}
-
-	id := fmt.Sprint(rule.ID)
-	if _, ok := re.OutputDetails[id]; !ok {
-		re.OutputDetails[id] = result
-	}
-
-	return
-}
-
 func applyAction(input map[string]interface{}, action Action) (result interface{}) {
 	switch action.Type {
 	case actiontype.ReplaceString:
 		params := action.Params
 		result = regexp.MustCompile(params.Pattern).ReplaceAllString(input[params.Name].(string), params.Replacement)
+		input[params.Name] = result
 	case actiontype.ReturnValue:
 		params := action.Params
-		result = params.Value
+		if v, ok := input[params.Name]; ok {
+			result = v
+		} else {
+			result = params.Replacement
+		}
 	default:
 		// Ignore unknown action
 	}
@@ -255,6 +320,12 @@ func isEqual(a, b interface{}) bool {
 }
 
 func isGreaterThan(a, b interface{}) bool {
+	if val, ok := a.(string); ok {
+		if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
+			a = int(intVal)
+		}
+	}
+
 	switch a := a.(type) {
 	case int:
 		if val, ok := b.(int); ok {
@@ -272,6 +343,12 @@ func isGreaterThan(a, b interface{}) bool {
 }
 
 func isGreaterThanOrEqual(a, b interface{}) bool {
+	if val, ok := a.(string); ok {
+		if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
+			a = int(intVal)
+		}
+	}
+
 	switch a := a.(type) {
 	case int:
 		if val, ok := b.(int); ok {
@@ -289,6 +366,12 @@ func isGreaterThanOrEqual(a, b interface{}) bool {
 }
 
 func isLessThan(a, b interface{}) bool {
+	if val, ok := a.(string); ok {
+		if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
+			a = int(intVal)
+		}
+	}
+
 	switch a := a.(type) {
 	case int:
 		if val, ok := b.(int); ok {
@@ -306,6 +389,12 @@ func isLessThan(a, b interface{}) bool {
 }
 
 func isLessThanOrEqual(a, b interface{}) bool {
+	if val, ok := a.(string); ok {
+		if intVal, err := strconv.ParseInt(val, 10, 64); err == nil {
+			a = int(intVal)
+		}
+	}
+
 	switch a := a.(type) {
 	case int:
 		if val, ok := b.(int); ok {
