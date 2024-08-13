@@ -2,7 +2,6 @@ package ruleengine
 
 import (
 	"encoding/json"
-	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/actiontype"
 	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/logicaloperator"
 	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/operator"
 	"reflect"
@@ -17,7 +16,7 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 		expected interface{}
 	}{
 		{
-			name: "Valid condition and action",
+			name: "Valid condition",
 			input: map[string]interface{}{
 				"amount":         5000,
 				"account_number": "123343242334",
@@ -45,21 +44,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: "ReplaceString",
-						Params: ActionParams{
-							Name:        "remark",
-							Pattern:     "BFST([0-9]+).*",
-							Replacement: "remark modif",
-						},
-					},
-				},
 			},
-			expected: "remark modif",
+			expected: true,
 		},
 		{
-			name: "Valid condition and action 2",
+			name: "Valid condition 2",
 			input: map[string]interface{}{
 				"amount":         5000,
 				"account_number": "123343242334",
@@ -87,19 +76,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: actiontype.ReturnValue,
-						Params: ActionParams{
-							Value: "overbooking",
-						},
-					},
-				},
 			},
-			expected: "overbooking",
+			expected: true,
 		},
 		{
-			name: "Valid condition and action 3",
+			name: "Valid condition 3",
 			input: map[string]interface{}{
 				"amount":         5000,
 				"account_number": "123343242334",
@@ -138,19 +119,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: actiontype.ReturnValue,
-						Params: ActionParams{
-							Value: "overbooking",
-						},
-					},
-				},
 			},
-			expected: "overbooking",
+			expected: true,
 		},
 		{
-			name: "Valid condition and action 4",
+			name: "Valid condition 4",
 			input: map[string]interface{}{
 				"amount":         5000,
 				"account_number": "13131",
@@ -189,19 +162,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: actiontype.ReturnValue,
-						Params: ActionParams{
-							Value: "overbooking",
-						},
-					},
-				},
 			},
-			expected: "overbooking",
+			expected: true,
 		},
 		{
-			name: "Valid condition and action 5",
+			name: "Valid condition 5",
 			input: map[string]interface{}{
 				"amount":         4000,
 				"account_number": "13131",
@@ -240,19 +205,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: actiontype.ReturnValue,
-						Params: ActionParams{
-							Value: "overbooking",
-						},
-					},
-				},
 			},
-			expected: "overbooking",
+			expected: true,
 		},
 		{
-			name: "Valid condition and action 6",
+			name: "Valid condition 6",
 			input: map[string]interface{}{
 				"amount":         4000,
 				"account_number": "13131",
@@ -291,19 +248,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: actiontype.ReturnValue,
-						Params: ActionParams{
-							Value: "overbooking",
-						},
-					},
-				},
 			},
-			expected: "overbooking",
+			expected: true,
 		},
 		{
-			name: "Valid condition without action",
+			name: "Valid condition 7",
 			input: map[string]interface{}{
 				"amount":         5000,
 				"account_number": "123343242334",
@@ -335,7 +284,7 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "Invalid condition without action",
+			name: "Invalid condition 8",
 			input: map[string]interface{}{
 				"amount":         700,
 				"account_number": "123343242334",
@@ -367,7 +316,7 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "Valid one condition with action",
+			name: "Valid one condition 9",
 			input: map[string]interface{}{
 				"amount":         5000,
 				"account_number": "123343242334",
@@ -385,24 +334,60 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 						},
 					},
 				},
-				Actions: []Action{
-					{
-						Type: "ReplaceString",
-						Params: ActionParams{
-							Name:        "remark",
-							Pattern:     "BFST([0-9]+).*",
-							Replacement: "remark modif",
+			},
+			expected: true,
+		},
+		{
+			name: "Valid one condition",
+			input: map[string]interface{}{
+				"bank_id":        "gv",
+				"account_number": "2193038077",
+				"credit":         "150000",
+				"debit":          0,
+				"remark":         "04515301",
+				"description":    "Transfer saldo dari user flip1352297860ed88e3adb4f",
+				"transferred_at": "1630038687",
+				"va_bank_id":     "bni",
+				"va_number":      "8558040402472870",
+			},
+			rule: Rule{
+				ID: 123,
+				Condition: Condition{
+					LogicalOperator: logicaloperator.And,
+					Conditions: []Condition{
+						{
+							Name:     "credit",
+							Operator: operator.GreaterThan,
+							Value:    2000,
 						},
 					},
 				},
 			},
-			expected: "remark modif",
+			expected: true,
+		},
+		{
+			name: "Valid without condition",
+			input: map[string]interface{}{
+				"bank_id":        "gv",
+				"account_number": "2193038077",
+				"credit":         "150000",
+				"debit":          0,
+				"remark":         "04515301",
+				"description":    "Transfer saldo dari user flip1352297860ed88e3adb4f",
+				"transferred_at": "1630038687",
+				"va_bank_id":     "bni",
+				"va_number":      "8558040402472870",
+			},
+			rule: Rule{
+				ID: 123,
+			},
+			expected: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			re := NewRuleEngine()
-			output, err := re.ApplyRule(tt.input, tt.rule)
+			output, err := re.applyRule(tt.input, tt.rule)
 			if err != nil {
 				t.Fatalf("Error applying rule: %v", err)
 			}
@@ -419,7 +404,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 		input           map[string]interface{}
 		ruleSet         string
 		ruleEngine      RuleEngine
-		expectedDetails *ruleEngine
+		expectedDetails *engine
 		expected        interface{}
 	}{
 		{
@@ -429,14 +414,14 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 				"account_number": "123343242334",
 				"remark":         "BFST123456",
 			},
-			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]},"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]}]}`,
+			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]}`,
 			ruleEngine: NewRuleEngine(),
-			expectedDetails: &ruleEngine{
+			expectedDetails: &engine{
 				OutputDetails: map[string]interface{}{
-					"1": "remark modif",
+					"1": true,
 				},
 			},
-			expected: true,
+			expected: "remark modif",
 		},
 		{
 			name: "Invalid ruleset",
@@ -445,34 +430,14 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 				"account_number": "123343242334",
 				"remark":         "BFST123456",
 			},
-			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]},"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]}]}`,
+			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif 2"}}]}`,
 			ruleEngine: NewRuleEngine(),
-			expectedDetails: &ruleEngine{
+			expectedDetails: &engine{
 				OutputDetails: map[string]interface{}{
 					"1": false,
 				},
 			},
 			expected: false,
-		},
-		{
-			name: "Valid ruleset - complex",
-			input: map[string]interface{}{
-				"amount":         5000,
-				"account_number": "123343242334",
-				"remark":         "BFST123456",
-				"bank_id":        "bca",
-			},
-			ruleSet:    `{"logical_operator":"OR","rules":[{"logical_operator":"AND","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]},"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]},{"logical_operator":"OR","rules":[{"id":4,"condition":{"logical_operator":"AND","conditions":[{"name":"provider","operator":"equals","value":"telkomsel"}]},"actions":null},{"id":5,"condition":{"logical_operator":"AND","conditions":[{"name":"bank_id","operator":"equals","value":"bca"}]},"actions":null}]}]},{"id":3,"condition":{"logical_operator":"AND","conditions":[{"name":"remark","operator":"equals","value":"wkwkwkwk"}]},"actions":null}]}`,
-			ruleEngine: NewRuleEngine(),
-			expectedDetails: &ruleEngine{
-				OutputDetails: map[string]interface{}{
-					"1": "remark modif",
-					"3": false,
-					"4": false,
-					"5": true,
-				},
-			},
-			expected: true,
 		},
 	}
 
@@ -481,7 +446,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			var ruleSet RuleSet
 			_ = json.Unmarshal([]byte(tt.ruleSet), &ruleSet)
 
-			output, err := tt.ruleEngine.ApplyRuleSet(tt.input, ruleSet)
+			output, err := tt.ruleEngine.applyRuleSet(tt.input, ruleSet)
 			if err != nil {
 				t.Fatalf("Error applying rule: %v", err)
 			}
@@ -493,13 +458,4 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			}
 		})
 	}
-}
-
-func convertSliceRuleToSliceInterface(rules []Rule) []interface{} {
-	var interfaces []interface{}
-	for _, r := range rules {
-		interfaces = append(interfaces, r)
-	}
-
-	return interfaces
 }

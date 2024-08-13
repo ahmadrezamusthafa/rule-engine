@@ -1,6 +1,6 @@
 package ruleengine
 
 type Action struct {
-	Type   string       `json:"type"`
-	Params ActionParams `json:"params"`
+	Type   string        `json:"type"`
+	Params *ActionParams `json:"params,omitempty"`
 }
