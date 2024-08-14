@@ -203,6 +203,216 @@ The result of applying the above rules and actions might look like this:
 3. **Evaluate**: The engine evaluates the conditions and executes actions if the conditions are met.
 4. **Receive Results**: Get the results of the evaluation along with any applied actions.
 
+## Rule Builder
+
+The rule builder feature simplifies the creation and management of rules using a fluent builder pattern. Below are detailed steps for creating different types of rules using the `rule-builder` feature.
+
+### Creating a Simple Rule
+
+**Steps:**
+
+1. **Initialize the Rule Set Builder**
+
+   ```go
+   builder := rulebuilder.NewRuleSetBuilder()
+   ```
+
+2. **Register the Parent Logical Operator**
+
+   Specify the logical operator for combining rules, e.g., `Or` or `And`.
+
+   ```go
+   builder.RegisterParentOperator(logicaloperators.Or)
+   ```
+
+3. **Register a Sub-Rule**
+
+   Define a sub-rule with conditions using the `RegisterSubRule` method.
+
+   ```go
+   builder.RegisterSubRule(1, logicaloperators.And, []ruleengine.Condition{
+       ruleengine.NewCondition("amount", operators.Equals, 5000),
+       ruleengine.NewCondition("account_number", operators.Equals, "123343242334"),
+   })
+   ```
+
+### Creating a Simple Rule with Actions
+
+**Steps:**
+
+1. **Initialize the Rule Set Builder**
+
+   ```go
+   builder := rulebuilder.NewRuleSetBuilder()
+   ```
+
+2. **Register the Parent Logical Operator**
+
+   ```go
+   builder.RegisterParentOperator(logicaloperators.Or)
+   ```
+
+3. **Register a Sub-Rule**
+
+   ```go
+   builder.RegisterSubRule(1, logicaloperators.And, []ruleengine.Condition{
+       ruleengine.NewCondition("amount", operators.Equals, 5000),
+       ruleengine.NewCondition("account_number", operators.Equals, "123343242334"),
+   })
+   ```
+
+4. **Register an Action**
+
+   Define actions to be executed if the conditions are met.
+
+   ```go
+   builder.RegisterAction("ReplaceString", "remark", "BFST([0-9]+).*", "$1")
+   ```
+
+### Creating Nested Sub-Rules
+
+**Steps:**
+
+1. **Initialize the Rule Set Builder**
+
+   ```go
+   builder := rulebuilder.NewRuleSetBuilder()
+   ```
+
+2. **Register the Parent Logical Operator**
+
+   ```go
+   builder.RegisterParentOperator(logicaloperators.Or)
+   ```
+
+3. **Register Nested Sub-Rules**
+
+   ```go
+   builder.RegisterSubRule(1, logicaloperators.And, []ruleengine.Condition{
+       ruleengine.NewCondition("amount", operators.Equals, 5000),
+       ruleengine.NewCondition("account_number", operators.Equals, "123343242334"),
+       ruleengine.NewCondition("remark", operators.Match, "BFST[0-9]+.*"),
+       ruleengine.NewGroupCondition(logicaloperators.Or,
+           ruleengine.NewCondition("amount1", operators.Equals, 123),
+           ruleengine.NewCondition("amount2", operators.Equals, 567),
+           ruleengine.NewGroupCondition(logicaloperators.Or,
+               ruleengine.NewCondition("amount1", operators.Equals, 123),
+               ruleengine.NewCondition("amount2", operators.Equals, 78978))),
+   })
+   ```
+
+4. **Register an Action**
+
+   ```go
+   builder.RegisterAction("ReplaceString", "remark", "BFST([0-9]+).*", "$1")
+   ```
+
+### Creating Multiple Sub-Rules
+
+**Steps:**
+
+1. **Initialize the Rule Set Builder**
+
+   ```go
+   builder := rulebuilder.NewRuleSetBuilder()
+   ```
+
+2. **Register the Parent Logical Operator**
+
+   ```go
+   builder.RegisterParentOperator(logicaloperators.Or)
+   ```
+
+3. **Register Multiple Sub-Rules**
+
+   ```go
+   builder.RegisterSubRule(1, logicaloperators.And, []ruleengine.Condition{
+       ruleengine.NewCondition("amount", operators.Equals, 5000),
+       ruleengine.NewCondition("account_number", operators.Equals, "123343242334"),
+       ruleengine.NewGroupCondition(logicaloperators.Or,
+          ruleengine.NewCondition("amount1", operators.Equals, 123),
+          ruleengine.NewCondition("amount2", operators.Equals, 567)),
+   })
+   
+   builder.RegisterSubRule(2, logicaloperators.And, []ruleengine.Condition{
+	   ruleengine.NewCondition("remark", operators.Equals, "hahaha"),
+   })
+   ```
+
+4. **Register an Action**
+
+   ```go
+   builder.RegisterAction("ReplaceString", "remark", "BFST([0-9]+).*", "$1")
+   ```
+
+### Example
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine"
+	logicaloperators "github.com/ahmadrezamusthafa/rule-engine/ruleengine/logical-operator"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/operators"
+	rulebuilder "github.com/ahmadrezamusthafa/rule-engine/ruleengine/rule-builder"
+)
+
+func main() {
+	input := map[string]interface{}{
+		"amount":         5000,
+		"account_number": "123343242334",
+		"remark":         "BFST123456",
+		"amount1":        123,
+	}
+
+	builder := rulebuilder.NewRuleSetBuilder().
+		RegisterParentOperator(logicaloperators.Or).
+		RegisterSubRule(1, logicaloperators.And, []ruleengine.Condition{
+			ruleengine.NewCondition("amount", operators.Equals, 5000),
+			ruleengine.NewCondition("account_number", operators.Equals, "123343242334"),
+			ruleengine.NewCondition("remark", operators.Match, "BFST[0-9]+.*"),
+			ruleengine.NewGroupCondition(logicaloperators.Or,
+				ruleengine.NewCondition("amount1", operators.Equals, 123),
+				ruleengine.NewCondition("amount2", operators.Equals, 567),
+				ruleengine.NewGroupCondition(logicaloperators.Or,
+					ruleengine.NewCondition("amount1", operators.Equals, 123),
+					ruleengine.NewCondition("amount2", operators.Equals, 78978))),
+		}).
+		RegisterSubRule(2, logicaloperators.And, []ruleengine.Condition{
+			ruleengine.NewCondition("remark", operators.Equals, "hahaha"),
+		}).
+		RegisterAction("ReplaceString", "remark", "BFST([0-9]+).*", "$1")
+
+	result := ruleengine.NewRuleEngine().
+		RegisterRuleSet(builder.Build()).
+		Apply(input).GetResult()
+
+	js, _ := json.Marshal(result)
+	fmt.Println("Result:", string(js))
+}
+```
+#### Result
+```
+{
+  "valid": true,
+  "actions": [
+    {
+      "type": "ReplaceString",
+      "params": {
+        "name": "remark",
+        "pattern": "BFST([0-9]+).*",
+        "replacement": "$1"
+      },
+      "result": "123456"
+    }
+  ],
+  "metadata": {
+    "description": "Rule id #1 result is true. Rule id #2 result is false."
+  }
+}
+```
+
 ## Contributing
 
 Feel free to contribute to this project by opening issues or submitting pull requests.
