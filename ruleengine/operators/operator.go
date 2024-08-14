@@ -1,4 +1,4 @@
-package operator
+package operators
 
 const (
 	Equals            = "equals"

@@ -53,6 +53,16 @@ func main() {
 			]
 		  }
 		}
+	  ],
+	  "actions": [
+		{
+		  "type": "ReplaceString",
+		  "params": {
+			"name": "remark",
+			"pattern": "BFST([0-9]+).*",
+			"replacement": "$1"
+		  }
+		}
 	  ]
 	}
 `

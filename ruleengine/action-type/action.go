@@ -1,4 +1,4 @@
-package actiontype
+package actiontypes
 
 const (
 	ReplaceString = "ReplaceString"

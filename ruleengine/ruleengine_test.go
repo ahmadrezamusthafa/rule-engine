@@ -2,8 +2,8 @@ package ruleengine
 
 import (
 	"encoding/json"
-	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/logicaloperator"
-	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/operator"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/logical-operator"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/operators"
 	"reflect"
 	"testing"
 )
@@ -25,21 +25,21 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "account_number",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    "123343242334",
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 					},
@@ -57,21 +57,21 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "account_number",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    "123343242334",
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 					},
@@ -90,29 +90,29 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 						{
-							LogicalOperator: logicaloperator.Or,
+							LogicalOperator: logicaloperators.Or,
 							Conditions: []Condition{
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bca",
 								},
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bni",
 								},
 							},
@@ -133,29 +133,29 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.Or,
+					LogicalOperator: logicaloperators.Or,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 						{
-							LogicalOperator: logicaloperator.Or,
+							LogicalOperator: logicaloperators.Or,
 							Conditions: []Condition{
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bca",
 								},
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bni",
 								},
 							},
@@ -176,29 +176,29 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.Or,
+					LogicalOperator: logicaloperators.Or,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 						{
-							LogicalOperator: logicaloperator.Or,
+							LogicalOperator: logicaloperators.Or,
 							Conditions: []Condition{
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bca",
 								},
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bni",
 								},
 							},
@@ -219,29 +219,29 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.Or,
+					LogicalOperator: logicaloperators.Or,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 						{
-							LogicalOperator: logicaloperator.And,
+							LogicalOperator: logicaloperators.And,
 							Conditions: []Condition{
 								{
 									Name:     "bank_id",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    "bni",
 								},
 								{
 									Name:     "amount",
-									Operator: operator.Equals,
+									Operator: operators.Equals,
 									Value:    4000,
 								},
 							},
@@ -261,21 +261,21 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "account_number",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    "123343242334",
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 					},
@@ -293,21 +293,21 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    5000,
 						},
 						{
 							Name:     "account_number",
-							Operator: operator.Equals,
+							Operator: operators.Equals,
 							Value:    "123343242334",
 						},
 						{
 							Name:     "remark",
-							Operator: operator.Match,
+							Operator: operators.Match,
 							Value:    "BFST[0-9]+.*",
 						},
 					},
@@ -325,11 +325,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "amount",
-							Operator: operator.GreaterThan,
+							Operator: operators.GreaterThan,
 							Value:    2000,
 						},
 					},
@@ -353,11 +353,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 			rule: Rule{
 				ID: 123,
 				Condition: Condition{
-					LogicalOperator: logicaloperator.And,
+					LogicalOperator: logicaloperators.And,
 					Conditions: []Condition{
 						{
 							Name:     "credit",
-							Operator: operator.GreaterThan,
+							Operator: operators.GreaterThan,
 							Value:    2000,
 						},
 					},
@@ -417,7 +417,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]}`,
 			ruleEngine: NewRuleEngine(),
 			expectedDetails: &engine{
-				OutputDetails: map[string]interface{}{
+				ruleEngineResults: map[string]interface{}{
 					"1": true,
 				},
 			},
@@ -433,7 +433,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif 2"}}]}`,
 			ruleEngine: NewRuleEngine(),
 			expectedDetails: &engine{
-				OutputDetails: map[string]interface{}{
+				ruleEngineResults: map[string]interface{}{
 					"1": false,
 				},
 			},
