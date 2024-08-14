@@ -1,7 +1,3 @@
-Here’s an updated version of your `README.md` with a Table of Contents:
-
----
-
 # Rule Engine
 
 The **rule-engine** project is a lightweight rule engine implemented in Go. It allows you to define rules with
@@ -84,8 +80,7 @@ The result of applying the above rule might look like this:
 ```json
 {
   "metadata": {
-    "description": "Rule id #1 result is true.",
-    "timestamp": "2024-08-14T08:55:52+07:00"
+    "description": "Rule id #1 result is true."
   },
   "valid": true
 }
@@ -177,8 +172,7 @@ The result of applying the above rules and actions might look like this:
     }
   ],
   "metadata": {
-    "description": "Rule id #1 result is true. Rule id #2 result is false.",
-    "timestamp": "2024-08-14T08:52:42+07:00"
+    "description": "Rule id #1 result is true. Rule id #2 result is false."
   },
   "valid": true
 }
