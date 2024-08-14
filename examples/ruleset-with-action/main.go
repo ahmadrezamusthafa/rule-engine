@@ -68,7 +68,7 @@ func main() {
 `
 
 	result := ruleengine.NewRuleEngine().
-		RegisterRuleSet(ruleSet).
+		RegisterJsonRuleSet(ruleSet).
 		Apply(input).GetResult()
 
 	js, _ := json.Marshal(result)
