@@ -31,6 +31,6 @@ func BenchmarkApplyRule(b *testing.B) {
 	`
 
 	for i := 0; i < b.N; i++ {
-		NewRuleEngine().RegisterRuleSet(ruleSet).Apply(input).GetResult()
+		NewRuleEngine().RegisterJsonRuleSet(ruleSet).Apply(input).GetResult()
 	}
 }

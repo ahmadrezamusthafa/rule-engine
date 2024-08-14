@@ -18,6 +18,9 @@ import (
 type RuleEngine interface {
 	RegisterJsonRuleSet(ruleSetStr string) Processor
 	RegisterRuleSet(ruleSet RuleSet) Processor
+
+	applyRule(input map[string]interface{}, rule Rule) (result interface{}, err error)
+	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (engineResult EngineResult, err error)
 }
 
 type Processor interface {
