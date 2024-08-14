@@ -18,7 +18,7 @@ import (
 type RuleEngine interface {
 	RegisterRuleSet(ruleSetStr string) Processor
 	applyRule(input map[string]interface{}, rule Rule) (interface{}, error)
-	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error)
+	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result EngineResult, err error)
 }
 
 type Processor interface {
@@ -26,31 +26,27 @@ type Processor interface {
 }
 
 type ResultComposer interface {
-	GetResult() map[string]interface{}
+	GetResult() EngineResult
 }
 
 type engine struct {
-	rule              *Rule
-	ruleSet           *RuleSet
-	descBuffer        bytes.Buffer
-	ruleResults       map[string]interface{}
-	ruleEngineResults map[string]interface{}
+	ruleSet     *RuleSet
+	descBuffer  bytes.Buffer
+	ruleResults map[string]interface{}
 }
 
 type processor struct {
-	err        error
 	ruleEngine *engine
 }
 
 type resultComposer struct {
-	processor *processor
+	engineResult EngineResult
 }
 
 func NewRuleEngine() RuleEngine {
 	return &engine{
-		descBuffer:        bytes.Buffer{},
-		ruleResults:       make(map[string]interface{}),
-		ruleEngineResults: make(map[string]interface{}),
+		descBuffer:  bytes.Buffer{},
+		ruleResults: make(map[string]interface{}),
 	}
 }
 
@@ -60,9 +56,9 @@ func newRuleEngineProcessor(ruleEngine *engine) Processor {
 	}
 }
 
-func newRuleEngineResult(processor *processor) ResultComposer {
+func newRuleEngineResult(engineResult EngineResult) ResultComposer {
 	return &resultComposer{
-		processor: processor,
+		engineResult: engineResult,
 	}
 }
 
@@ -77,27 +73,26 @@ func (re *engine) RegisterRuleSet(ruleSetStr string) Processor {
 }
 
 func (p *processor) Apply(input map[string]interface{}) ResultComposer {
-	var err error
-	if p.ruleEngine.rule != nil {
-		_, err = p.ruleEngine.applyRule(input, *p.ruleEngine.rule)
-	} else if p.ruleEngine.ruleSet != nil {
-		_, err = p.ruleEngine.applyRuleSet(input, *p.ruleEngine.ruleSet)
+	result, err := p.ruleEngine.applyRuleSet(input, *p.ruleEngine.ruleSet)
+	if err != nil {
+		result.Error = err.Error()
 	}
-	if err == nil {
-		err = errors.New("rule and rule set are empty, please specify one")
-	}
-	p.err = err
-	return newRuleEngineResult(p)
+	return newRuleEngineResult(result)
 }
 
-func (p *resultComposer) GetResult() map[string]interface{} {
-	return p.processor.ruleEngine.ruleEngineResults
+func (p *resultComposer) GetResult() EngineResult {
+	return p.engineResult
 }
 
-func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error) {
+func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (engineResult EngineResult, err error) {
 	if ruleSet.LogicalOperator == "" {
 		ruleSet.LogicalOperator = logicaloperators.And
 	}
+
+	var (
+		result           interface{}
+		validationResult bool
+	)
 
 	if ruleSet.LogicalOperator == logicaloperators.And {
 		result, err = applyLogicalAnd(input, ruleSet.Rules, re)
@@ -105,36 +100,36 @@ func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (r
 		result, err = applyLogicalOr(input, ruleSet.Rules, re)
 	}
 
-	var ruleResult bool
 	if result == true {
-		ruleResult = true
+		validationResult = true
 		for _, action := range ruleSet.Actions {
 			result = applyAction(input, action)
 		}
 	}
 
-	re.ruleEngineResults["valid"] = ruleResult
-	if err != nil {
-		re.ruleEngineResults["errors"] = err.Error()
+	engineResult = EngineResult{
+		Valid:   validationResult,
+		Actions: nil,
+		Metadata: map[string]interface{}{
+			"description": re.descBuffer.String(),
+		},
 	}
-	re.ruleEngineResults["metadata"] = map[string]interface{}{
-		"description": re.descBuffer.String(),
-	}
-	if ruleResult && len(ruleSet.Actions) > 0 {
-		actionResults := []interface{}{}
+	if validationResult && len(ruleSet.Actions) > 0 {
+		actionResults := make([]ActionResult, 0)
 		for _, action := range ruleSet.Actions {
 			actionResult := applyAction(input, action)
-			actionResults = append(actionResults, map[string]interface{}{
-				"type":   action.Type,
-				"params": action.Params,
-				"result": actionResult,
+			actionResults = append(actionResults, ActionResult{
+				Params: action.Params,
+				Result: actionResult,
+				Type:   action.Type,
 			})
 		}
-		re.ruleEngineResults["actions"] = actionResults
+		engineResult.Actions = actionResults
 	}
+	re.ruleResults = map[string]interface{}{}
 	re.descBuffer.Reset()
 
-	return result, err
+	return engineResult, err
 }
 
 func (re *engine) applyRule(input map[string]interface{}, rule Rule) (result interface{}, err error) {
@@ -283,7 +278,6 @@ func applyAction(input map[string]interface{}, action Action) (result interface{
 	case actiontypes.ReplaceString:
 		params := action.Params
 		result = regexp.MustCompile(params.Pattern).ReplaceAllString(input[params.Name].(string), params.Replacement)
-		input[params.Name] = result
 	case actiontypes.ReturnValue:
 		params := action.Params
 		if v, ok := input[params.Name]; ok {

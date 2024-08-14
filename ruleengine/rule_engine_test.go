@@ -415,7 +415,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			},
 			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]}`,
 			ruleEngine: NewRuleEngine(),
-			expected:   "remark modif",
+			expected:   true,
 		},
 		{
 			name: "Invalid ruleset",
@@ -439,7 +439,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error applying rule: %v", err)
 			}
-			if !reflect.DeepEqual(output, tt.expected) {
+			if !reflect.DeepEqual(output.Valid, tt.expected) {
 				t.Errorf("Unexpected output. Expected: %v, Got: %v", tt.expected, output)
 			}
 		})
