@@ -86,6 +86,24 @@ The result of applying the above rule might look like this:
 }
 ```
 
+## Actions
+
+### Supported Actions
+
+The rule engine supports the following types of actions:
+
+| Action Type     | Description                                                                   |
+|-----------------|-------------------------------------------------------------------------------|
+| `ReplaceString` | Replaces parts of a string based on a regular expression pattern.             |
+| `ReturnValue`   | Returns a value based on the name from the input or uses a replacement value. |
+
+### Action Parameters
+
+| Action Type     | Required Parameters              | Optional Parameters | Description                                                                                                                |
+|-----------------|----------------------------------|---------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `ReplaceString` | `name`, `pattern`, `replacement` | N/A                 | Replaces occurrences in the `name` value based on the `pattern` with the `replacement` value.                              |
+| `ReturnValue`   | `name`                           | `replacement`       | Returns the value associated with `name` from the input. If `replacement` is provided, it will return `replacement` value. |
+
 ### Multiple Rules with Actions Example
 
 **Input**
