@@ -67,16 +67,10 @@ func main() {
 	}
 `
 
-	re := ruleengine.NewRuleEngine().RegisterRuleSet(ruleSet)
-	result, err := re.Apply(input)
-	if err != nil {
-		fmt.Println("Error applying rule set:", err)
-		return
-	}
+	result := ruleengine.NewRuleEngine().
+		RegisterRuleSet(ruleSet).
+		Apply(input).GetResult()
 
-	js, _ := json.Marshal(re.GetResult())
-	fmt.Println("Detail rule output:", string(js))
-
-	// Display the result after applying the ruleSet
-	fmt.Println("Output after applying rule set:", result)
+	js, _ := json.Marshal(result)
+	fmt.Println("Result:", string(js))
 }

@@ -13,7 +13,6 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
-	"time"
 )
 
 type RuleEngine interface {
@@ -23,7 +22,10 @@ type RuleEngine interface {
 }
 
 type Processor interface {
-	Apply(input map[string]interface{}) (interface{}, error)
+	Apply(input map[string]interface{}) ResultComposer
+}
+
+type ResultComposer interface {
 	GetResult() map[string]interface{}
 }
 
@@ -36,7 +38,12 @@ type engine struct {
 }
 
 type processor struct {
+	err        error
 	ruleEngine *engine
+}
+
+type resultComposer struct {
+	processor *processor
 }
 
 func NewRuleEngine() RuleEngine {
@@ -53,6 +60,12 @@ func newRuleEngineProcessor(ruleEngine *engine) Processor {
 	}
 }
 
+func newRuleEngineResult(processor *processor) ResultComposer {
+	return &resultComposer{
+		processor: processor,
+	}
+}
+
 func (re *engine) RegisterRuleSet(ruleSetStr string) Processor {
 	var ruleSet RuleSet
 	err := json.Unmarshal([]byte(ruleSetStr), &ruleSet)
@@ -63,17 +76,22 @@ func (re *engine) RegisterRuleSet(ruleSetStr string) Processor {
 	return newRuleEngineProcessor(re)
 }
 
-func (p *processor) Apply(input map[string]interface{}) (result interface{}, err error) {
+func (p *processor) Apply(input map[string]interface{}) ResultComposer {
+	var err error
 	if p.ruleEngine.rule != nil {
-		return p.ruleEngine.applyRule(input, *p.ruleEngine.rule)
+		_, err = p.ruleEngine.applyRule(input, *p.ruleEngine.rule)
 	} else if p.ruleEngine.ruleSet != nil {
-		return p.ruleEngine.applyRuleSet(input, *p.ruleEngine.ruleSet)
+		_, err = p.ruleEngine.applyRuleSet(input, *p.ruleEngine.ruleSet)
 	}
-	return nil, errors.New("rule and rule set are empty, please specify one")
+	if err == nil {
+		err = errors.New("rule and rule set are empty, please specify one")
+	}
+	p.err = err
+	return newRuleEngineResult(p)
 }
 
-func (p *processor) GetResult() map[string]interface{} {
-	return p.ruleEngine.ruleEngineResults
+func (p *resultComposer) GetResult() map[string]interface{} {
+	return p.processor.ruleEngine.ruleEngineResults
 }
 
 func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error) {
@@ -101,7 +119,6 @@ func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (r
 	}
 	re.ruleEngineResults["metadata"] = map[string]interface{}{
 		"description": re.descBuffer.String(),
-		"timestamp":   time.Now().Format(time.RFC3339),
 	}
 	if ruleResult && len(ruleSet.Actions) > 0 {
 		actionResults := []interface{}{}

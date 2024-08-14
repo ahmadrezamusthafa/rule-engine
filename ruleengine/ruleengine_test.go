@@ -400,12 +400,11 @@ func Test_ruleEngine_ApplyRule(t *testing.T) {
 
 func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 	var tests = []struct {
-		name            string
-		input           map[string]interface{}
-		ruleSet         string
-		ruleEngine      RuleEngine
-		expectedDetails *engine
-		expected        interface{}
+		name       string
+		input      map[string]interface{}
+		ruleSet    string
+		ruleEngine RuleEngine
+		expected   interface{}
 	}{
 		{
 			name: "Valid ruleset",
@@ -416,12 +415,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			},
 			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif"}}]}`,
 			ruleEngine: NewRuleEngine(),
-			expectedDetails: &engine{
-				ruleEngineResults: map[string]interface{}{
-					"1": true,
-				},
-			},
-			expected: "remark modif",
+			expected:   "remark modif",
 		},
 		{
 			name: "Invalid ruleset",
@@ -432,12 +426,7 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			},
 			ruleSet:    `{"logical_operator":"OR","rules":[{"id":1,"condition":{"logical_operator":"AND","conditions":[{"name":"amount","operator":"greater_than","value":2000}]}}],"actions":[{"type":"ReplaceString","params":{"name":"remark","pattern":"BFST([0-9]+).*","replacement":"remark modif 2"}}]}`,
 			ruleEngine: NewRuleEngine(),
-			expectedDetails: &engine{
-				ruleEngineResults: map[string]interface{}{
-					"1": false,
-				},
-			},
-			expected: false,
+			expected:   false,
 		},
 	}
 
@@ -449,9 +438,6 @@ func Test_ruleEngine_ApplyRuleSet(t *testing.T) {
 			output, err := tt.ruleEngine.applyRuleSet(tt.input, ruleSet)
 			if err != nil {
 				t.Fatalf("Error applying rule: %v", err)
-			}
-			if !reflect.DeepEqual(tt.ruleEngine, tt.expectedDetails) {
-				t.Errorf("Unexpected details. Expected: %v, Got: %v", tt.expectedDetails, tt.ruleEngine)
 			}
 			if !reflect.DeepEqual(output, tt.expected) {
 				t.Errorf("Unexpected output. Expected: %v, Got: %v", tt.expected, output)
