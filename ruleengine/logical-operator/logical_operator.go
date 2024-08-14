@@ -1,4 +1,4 @@
-package logicaloperator
+package logicaloperators
 
 const (
 	And = "AND"

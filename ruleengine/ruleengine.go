@@ -1,21 +1,22 @@
 package ruleengine
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/actiontype"
-	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/logicaloperator"
-	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/operator"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/action-type"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/logical-operator"
+	"github.com/ahmadrezamusthafa/rule-engine/ruleengine/operators"
 	"github.com/mitchellh/mapstructure"
 	"log"
 	"reflect"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 type RuleEngine interface {
-	RegisterRule(ruleStr string) Processor
 	RegisterRuleSet(ruleSetStr string) Processor
 	applyRule(input map[string]interface{}, rule Rule) (interface{}, error)
 	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error)
@@ -23,13 +24,15 @@ type RuleEngine interface {
 
 type Processor interface {
 	Apply(input map[string]interface{}) (interface{}, error)
-	GetOutputDetails() map[string]interface{}
+	GetResult() map[string]interface{}
 }
 
 type engine struct {
-	rule          *Rule
-	ruleSet       *RuleSet
-	OutputDetails map[string]interface{} `json:"output_details"`
+	rule              *Rule
+	ruleSet           *RuleSet
+	descBuffer        bytes.Buffer
+	ruleResults       map[string]interface{}
+	ruleEngineResults map[string]interface{}
 }
 
 type processor struct {
@@ -38,7 +41,9 @@ type processor struct {
 
 func NewRuleEngine() RuleEngine {
 	return &engine{
-		OutputDetails: make(map[string]interface{}),
+		descBuffer:        bytes.Buffer{},
+		ruleResults:       make(map[string]interface{}),
+		ruleEngineResults: make(map[string]interface{}),
 	}
 }
 
@@ -46,16 +51,6 @@ func newRuleEngineProcessor(ruleEngine *engine) Processor {
 	return &processor{
 		ruleEngine: ruleEngine,
 	}
-}
-
-func (re *engine) RegisterRule(ruleStr string) Processor {
-	var rule Rule
-	err := json.Unmarshal([]byte(ruleStr), &rule)
-	if err != nil {
-		return nil
-	}
-	re.rule = &rule
-	return newRuleEngineProcessor(re)
 }
 
 func (re *engine) RegisterRuleSet(ruleSetStr string) Processor {
@@ -77,40 +72,68 @@ func (p *processor) Apply(input map[string]interface{}) (result interface{}, err
 	return nil, errors.New("rule and rule set are empty, please specify one")
 }
 
-func (p *processor) GetOutputDetails() map[string]interface{} {
-	return p.ruleEngine.OutputDetails
+func (p *processor) GetResult() map[string]interface{} {
+	return p.ruleEngine.ruleEngineResults
 }
 
 func (re *engine) applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result interface{}, err error) {
 	if ruleSet.LogicalOperator == "" {
-		ruleSet.LogicalOperator = logicaloperator.And
+		ruleSet.LogicalOperator = logicaloperators.And
 	}
 
-	if ruleSet.LogicalOperator == logicaloperator.And {
+	if ruleSet.LogicalOperator == logicaloperators.And {
 		result, err = applyLogicalAnd(input, ruleSet.Rules, re)
-	} else if ruleSet.LogicalOperator == logicaloperator.Or {
+	} else if ruleSet.LogicalOperator == logicaloperators.Or {
 		result, err = applyLogicalOr(input, ruleSet.Rules, re)
 	}
 
+	var ruleResult bool
 	if result == true {
+		ruleResult = true
 		for _, action := range ruleSet.Actions {
 			result = applyAction(input, action)
 		}
 	}
+
+	re.ruleEngineResults["valid"] = ruleResult
+	if err != nil {
+		re.ruleEngineResults["errors"] = err.Error()
+	}
+	re.ruleEngineResults["metadata"] = map[string]interface{}{
+		"description": re.descBuffer.String(),
+		"timestamp":   time.Now().Format(time.RFC3339),
+	}
+	if ruleResult && len(ruleSet.Actions) > 0 {
+		actionResults := []interface{}{}
+		for _, action := range ruleSet.Actions {
+			actionResult := applyAction(input, action)
+			actionResults = append(actionResults, map[string]interface{}{
+				"type":   action.Type,
+				"params": action.Params,
+				"result": actionResult,
+			})
+		}
+		re.ruleEngineResults["actions"] = actionResults
+	}
+	re.descBuffer.Reset()
 
 	return result, err
 }
 
 func (re *engine) applyRule(input map[string]interface{}, rule Rule) (result interface{}, err error) {
 	if rule.Condition.LogicalOperator == "" {
-		rule.Condition.LogicalOperator = logicaloperator.And
+		rule.Condition.LogicalOperator = logicaloperators.And
 	}
 
 	result = evaluateConditions(input, rule.Condition)
 
 	id := fmt.Sprint(rule.ID)
-	if _, ok := re.OutputDetails[id]; !ok {
-		re.OutputDetails[id] = result
+	if _, ok := re.ruleResults[id]; !ok {
+		re.ruleResults[id] = result
+		if re.descBuffer.Len() > 0 {
+			re.descBuffer.WriteRune(' ')
+		}
+		re.descBuffer.WriteString(fmt.Sprintf("Rule id #%s result is %v.", id, result))
 	}
 
 	return
@@ -240,11 +263,11 @@ func applyMapRule(input map[string]interface{}, ruleMap map[string]interface{}, 
 
 func applyAction(input map[string]interface{}, action Action) (result interface{}) {
 	switch action.Type {
-	case actiontype.ReplaceString:
+	case actiontypes.ReplaceString:
 		params := action.Params
 		result = regexp.MustCompile(params.Pattern).ReplaceAllString(input[params.Name].(string), params.Replacement)
 		input[params.Name] = result
-	case actiontype.ReturnValue:
+	case actiontypes.ReturnValue:
 		params := action.Params
 		if v, ok := input[params.Name]; ok {
 			result = v
@@ -259,14 +282,14 @@ func applyAction(input map[string]interface{}, action Action) (result interface{
 }
 
 func evaluateConditions(input map[string]interface{}, condition Condition) bool {
-	if condition.LogicalOperator == logicaloperator.And {
+	if condition.LogicalOperator == logicaloperators.And {
 		for _, subCondition := range condition.Conditions {
 			if !evaluateConditions(input, subCondition) {
 				return false
 			}
 		}
 		return true
-	} else if condition.LogicalOperator == logicaloperator.Or {
+	} else if condition.LogicalOperator == logicaloperators.Or {
 		for _, subCondition := range condition.Conditions {
 			if evaluateConditions(input, subCondition) {
 				return true
@@ -276,19 +299,19 @@ func evaluateConditions(input map[string]interface{}, condition Condition) bool 
 	}
 
 	switch condition.Operator {
-	case operator.Equals:
+	case operators.Equals:
 		return isEqual(input[condition.Name], condition.Value)
-	case operator.GreaterThan:
+	case operators.GreaterThan:
 		return isGreaterThan(input[condition.Name], condition.Value)
-	case operator.GreaterThanEquals:
+	case operators.GreaterThanEquals:
 		return isGreaterThanOrEqual(input[condition.Name], condition.Value)
-	case operator.LessThan:
+	case operators.LessThan:
 		return isLessThan(input[condition.Name], condition.Value)
-	case operator.LessThanEquals:
+	case operators.LessThanEquals:
 		return isLessThanOrEqual(input[condition.Name], condition.Value)
-	case operator.NotEquals:
+	case operators.NotEquals:
 		return isNotEqual(input[condition.Name], condition.Value)
-	case operator.Match:
+	case operators.Match:
 		match, _ := regexp.MatchString(condition.Value.(string), fmt.Sprintf("%v", input[condition.Name]))
 		return match
 	default:
