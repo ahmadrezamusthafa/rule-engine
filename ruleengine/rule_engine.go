@@ -16,9 +16,11 @@ import (
 )
 
 type RuleEngine interface {
-	RegisterRuleSet(ruleSetStr string) Processor
-	applyRule(input map[string]interface{}, rule Rule) (interface{}, error)
-	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (result EngineResult, err error)
+	RegisterJsonRuleSet(ruleSetStr string) Processor
+	RegisterRuleSet(ruleSet RuleSet) Processor
+
+	applyRule(input map[string]interface{}, rule Rule) (result interface{}, err error)
+	applyRuleSet(input map[string]interface{}, ruleSet RuleSet) (engineResult EngineResult, err error)
 }
 
 type Processor interface {
@@ -62,12 +64,17 @@ func newRuleEngineResult(engineResult EngineResult) ResultComposer {
 	}
 }
 
-func (re *engine) RegisterRuleSet(ruleSetStr string) Processor {
+func (re *engine) RegisterJsonRuleSet(ruleSetStr string) Processor {
 	var ruleSet RuleSet
 	err := json.Unmarshal([]byte(ruleSetStr), &ruleSet)
 	if err != nil {
 		return nil
 	}
+	re.ruleSet = &ruleSet
+	return newRuleEngineProcessor(re)
+}
+
+func (re *engine) RegisterRuleSet(ruleSet RuleSet) Processor {
 	re.ruleSet = &ruleSet
 	return newRuleEngineProcessor(re)
 }
