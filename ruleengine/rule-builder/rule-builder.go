@@ -32,19 +32,6 @@ func (b *Builder) RegisterSubRule(id int, logicalOperator string, conditions []r
 	return b
 }
 
-func (b *Builder) RegisterSubRule2(id int, logicalOperator string, conditions []ruleengine.Condition) *Builder {
-	condition := ruleengine.Condition{
-		LogicalOperator: logicalOperator,
-		Conditions:      conditions,
-	}
-	subRule := ruleengine.Rule{
-		ID:        id,
-		Condition: condition,
-	}
-	b.ruleSet.Rules = append(b.ruleSet.Rules, subRule)
-	return b
-}
-
 func (b *Builder) RegisterAction(actionType string, name, pattern, replacement string) *Builder {
 	action := ruleengine.Action{
 		Type: actionType,
